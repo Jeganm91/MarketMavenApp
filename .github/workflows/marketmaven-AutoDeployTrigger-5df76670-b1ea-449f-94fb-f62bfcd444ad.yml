@@ -1,0 +1,48 @@
+name: Trigger auto deployment for marketmaven
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/marketmaven-AutoDeployTrigger-5df76670-b1ea-449f-94fb-f62bfcd444ad.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.MARKETMAVEN_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.MARKETMAVEN_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.MARKETMAVEN_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          registryUrl: 
+          registryUsername: ${{ secrets.MARKETMAVEN_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.MARKETMAVEN_REGISTRY_PASSWORD }}
+          containerAppName: marketmaven
+          resourceGroup: wiprotesting-anandatheerthan
+          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
